@@ -953,8 +953,11 @@
       div.className = 'word-row';
 
       const wi = document.createElement('input'); wi.type = 'text'; wi.placeholder = 'word or char...'; wi.value = r.word;
-      wi.addEventListener('input', e => { rows[i].word = e.target.value; analyzeOnly(); });
-      wi.addEventListener('blur', () => {
+      wi.addEventListener('input', e => { r.word = e.target.value; analyzeOnly(); });
+      wi.addEventListener('blur', e => {
+        // Don't sort if focus moved to a number input in the same row
+        const next = e.relatedTarget;
+        if (next && div.contains(next)) return;
         rows.sort((a, b) => a.word.toLowerCase().localeCompare(b.word.toLowerCase()));
         buildRows(); analyzeOnly();
       });
@@ -1356,10 +1359,19 @@
 
       const wi = document.createElement('input');
       wi.type = 'text'; wi.value = word;
-      wi.addEventListener('input', e => { absolutesList[i] = e.target.value.trim().toLowerCase(); analyzeOnly(); });
+      wi.addEventListener('input', e => {
+        absolutesList[i] = e.target.value.toLowerCase();
+        analyzeOnly();
+      });
       wi.addEventListener('blur', () => {
-        absolutesList = absolutesList.filter(w => w.length > 0);
-        buildAbsoluteRows(); analyzeOnly();
+        // Only clean up empties — don't rebuild while user is mid-type
+        absolutesList[i] = absolutesList[i].trim();
+        const hadEmpty = absolutesList.some(w => w.length === 0);
+        if (hadEmpty) {
+          absolutesList = absolutesList.filter(w => w.length > 0);
+          buildAbsoluteRows();
+        }
+        analyzeOnly();
       });
 
       const db = document.createElement('button');
