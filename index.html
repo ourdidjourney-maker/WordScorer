@@ -555,6 +555,7 @@
         <div class="text-input-real empty"
           id="text-input"
           contenteditable="true"
+          tabindex="-1"
           spellcheck="false"
           data-placeholder="Paste or type any text here. Scoring updates live..."></div>
       </div>
@@ -1056,11 +1057,18 @@
       const div = document.createElement('div');
       div.className = 'word-row';
 
+      // Create all three inputs first so keydown closures can reference each other
       const wi = document.createElement('input'); wi.type = 'text'; wi.placeholder = 'word or char...'; wi.value = r.word;
+      const sn = document.createElement('input'); sn.type = 'number'; sn.placeholder = '−';
+      const sp = document.createElement('input'); sp.type = 'number'; sp.placeholder = '+';
+
+      // Word input
       wi.addEventListener('input', e => { r.word = e.target.value; analyzeOnly(); });
+      wi.addEventListener('keydown', e => {
+        if (e.key === 'Tab' && !e.shiftKey) { e.preventDefault(); sn.focus(); }
+      });
 
       // Negative value input
-      const sn = document.createElement('input'); sn.type = 'number'; sn.placeholder = '−';
       sn.value = r.scoreNeg !== undefined && r.scoreNeg !== null ? r.scoreNeg : '';
       sn.style.color = '#ff5c5c';
       sn.addEventListener('input', e => {
@@ -1068,9 +1076,12 @@
         if (row) row.scoreNeg = e.target.value !== '' ? parseFloat(e.target.value) : null;
         analyzeOnly();
       });
+      sn.addEventListener('keydown', e => {
+        if (e.key === 'Tab' && !e.shiftKey) { e.preventDefault(); sp.focus(); }
+        if (e.key === 'Tab' && e.shiftKey)  { e.preventDefault(); wi.focus(); }
+      });
 
       // Positive value input
-      const sp = document.createElement('input'); sp.type = 'number'; sp.placeholder = '+';
       sp.value = r.scorePos !== undefined && r.scorePos !== null ? r.scorePos : '';
       sp.style.color = 'var(--accent)';
       sp.addEventListener('input', e => {
@@ -1078,13 +1089,18 @@
         if (row) row.scorePos = e.target.value !== '' ? parseFloat(e.target.value) : null;
         analyzeOnly();
       });
+      sp.addEventListener('keydown', e => {
+        if (e.key === 'Tab' && e.shiftKey) { e.preventDefault(); sn.focus(); }
+      });
 
-      // Sort once when focus leaves the entire row
-      div.addEventListener('focusout', e => {
-        const next = e.relatedTarget;
-        if (next && div.contains(next)) return; // still inside row
-        rows.sort((a, b) => a.word.toLowerCase().localeCompare(b.word.toLowerCase()));
-        buildRows(); analyzeOnly();
+      // Sort only when focus truly leaves the row
+      div.addEventListener('focusout', () => {
+        setTimeout(() => {
+          if (!div.contains(document.activeElement)) {
+            rows.sort((a, b) => a.word.toLowerCase().localeCompare(b.word.toLowerCase()));
+            buildRows(); analyzeOnly();
+          }
+        }, 0);
       });
 
       const db = document.createElement('button'); db.className = 'del-btn'; db.textContent = '×';
@@ -2479,12 +2495,8 @@
 
   buildRows();
   buildAbsoluteRows();
-  updateMultiplier(20); // initialize preview display
+  updateMultiplier(20);
   analyzeOnly();
-
-  document.getElementById('word-list').addEventListener('focusout', () => {
-    analyzeOnly();
-  });
 </script>
 </body>
 </html>
