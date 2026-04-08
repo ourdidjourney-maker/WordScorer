@@ -238,7 +238,15 @@
   .polarity-bar-neg { height: 100%; background: #ff5c5c; border-radius: 0 4px 4px 0; transition: width 0.4s ease; }
   .polarity-bar-labels { display: flex; justify-content: space-between; margin-top: 3px; }
   .polarity-bar-label { font-size: 10px; color: var(--text-dim); font-family: var(--font-mono); }
-  /* DUALITY PANEL */
+  /* CHARACTER BREAKDOWN */
+  .char-panel { margin-top: 8px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 0.5rem 0.9rem; }
+  .char-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+  .char-metric { background: var(--bg); border: 1px solid var(--border); border-radius: 6px; padding: 0.5rem 0.7rem; }
+  .char-metric-label { font-size: 9px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-dim); font-family: var(--font-head); font-weight: 600; margin-bottom: 3px; }
+  .char-metric-val { font-size: 16px; font-weight: 500; font-family: var(--font-head); letter-spacing: -0.02em; color: var(--text); }
+  .char-metric-val.accent { color: var(--accent); }
+  .char-metric-val.blue   { color: #5cb8ff; }
+  .char-metric-val.orange { color: #ff8c30; }
   .duality-panel { margin-top: 8px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 0.5rem 0.9rem; }
   .duality-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
   .duality-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 8px; }
@@ -581,6 +589,11 @@
           <div class="metric-label has-info" data-info="TOTAL WORDS|Total word-level tokens found in the text.|Use this alongside Words Matched to calculate match density: matched ÷ total = % of text carrying emotional weight.">Total Words</div>
           <div class="metric-value" id="total-words">0</div>
         </div>
+        <div class="metric" id="m-chars">
+          <div class="metric-label has-info" data-info="CHARACTER DENSITY|Total characters in the text — both counts shown.|With spaces = every character including spaces.|No spaces = letters, symbols and punctuation only.|Characters per word = avg word length — low = punchy/simple, high = complex/academic.">Char Density</div>
+          <div class="metric-value" id="char-total" style="font-size:16px;">0</div>
+          <div style="font-size:10px;color:var(--text-muted);font-family:var(--font-mono);margin-top:2px;" id="char-sub">—</div>
+        </div>
       </div>
       <div class="hits-row" id="hits-list">
         <span class="no-hits">Matched words will appear here...</span>
@@ -708,7 +721,31 @@
         </div>
       </div>
 
-      <!-- SPIKE DISTANCE: gap between emotional spikes -->
+      <!-- CHARACTER BREAKDOWN -->
+      <div class="char-panel">
+        <div class="sb-header" style="margin-bottom:8px;">
+          <span class="analytics-label has-info" data-info="CHARACTER BREAKDOWN|Full character analysis of the text.|With spaces = every character including spaces.|No spaces = letters and symbols only.|Letters = pure alphabetic count.|Symbols = punctuation, emoticons, special characters.|Avg Word Length = total letters ÷ total words. Low = simple/punchy. High = complex/academic.">Character Breakdown</span>
+          <span style="font-size:10px;color:var(--text-dim);font-family:var(--font-mono)" id="char-per-word">—</span>
+        </div>
+        <div class="char-grid">
+          <div class="char-metric">
+            <div class="char-metric-label">With Spaces</div>
+            <div class="char-metric-val accent" id="cb-with-spaces">—</div>
+          </div>
+          <div class="char-metric">
+            <div class="char-metric-label">No Spaces</div>
+            <div class="char-metric-val blue" id="cb-no-spaces">—</div>
+          </div>
+          <div class="char-metric">
+            <div class="char-metric-label">Letters</div>
+            <div class="char-metric-val" id="cb-letters">—</div>
+          </div>
+          <div class="char-metric">
+            <div class="char-metric-label">Symbols</div>
+            <div class="char-metric-val orange" id="cb-symbols">—</div>
+          </div>
+        </div>
+      </div>
       <div class="spike-panel">
         <div class="spike-header">
           <span class="analytics-label has-info" data-info="SPIKE DISTANCE|Measures the gap between high-value word spikes across the text.|Avg Gap = mean number of words between each spike — low = massed/clustered, high = isolated/surgical.|Longest Gap = biggest stretch of calm between spikes — shows where the author breathes.|Pattern label tells you the dominant delivery style.|🔵 Surgical = spikes far apart, precision strikes in calm language.|🟢 Distributed = even spread, controlled throughout.|🟠 Massed = spikes packed together, sustained emotional assault.">Spike Distance</span>
@@ -2149,6 +2186,28 @@
     lblRight.textContent = `negative ${negPct}%`;
   }
 
+  // ── CHARACTER BREAKDOWN ───────────────────────────────────────────────
+  function updateCharacterBreakdown(raw) {
+    const withSpaces  = raw.length;
+    const noSpaces    = raw.replace(/ /g, '').length;
+    const letters     = (raw.match(/[a-zA-Z]/g) || []).length;
+    const symbols     = (raw.match(/[^a-zA-Z\s]/g) || []).length;
+    const wordCount   = (raw.match(/\S+/g) || []).length;
+    const avgWordLen  = wordCount > 0 ? (letters / wordCount).toFixed(1) : '—';
+
+    document.getElementById('cb-with-spaces').textContent = withSpaces || '—';
+    document.getElementById('cb-no-spaces').textContent   = noSpaces   || '—';
+    document.getElementById('cb-letters').textContent     = letters    || '—';
+    document.getElementById('cb-symbols').textContent     = symbols    || '—';
+    document.getElementById('char-per-word').textContent  = wordCount > 0 ? `avg word length ${avgWordLen} chars` : '—';
+
+    // Update top metric card
+    const totalEl = document.getElementById('char-total');
+    const subEl   = document.getElementById('char-sub');
+    if (totalEl) totalEl.textContent = withSpaces || '0';
+    if (subEl)   subEl.textContent   = withSpaces > 0 ? `${noSpaces} no spaces · ${avgWordLen} per word` : '—';
+  }
+
   function analyzeOnly() {
     const raw = getRawText();
     if (!raw.trim()) peakStreak = null;
@@ -2296,6 +2355,7 @@
     updateHedgeDensity(wordTokens);
     updateImperativeCounter(raw3);
     updateSentenceOpeners(raw3);
+    updateCharacterBreakdown(raw3);
   }
 
   function analyze() { analyzeOnly(); }
