@@ -415,8 +415,9 @@
   .abs-word-rows { max-height: 160px; overflow-y: auto; padding: 0.4rem 1.25rem; display: flex; flex-direction: column; gap: 4px; scrollbar-width: thin; scrollbar-color: var(--border) transparent; }
   .abs-word-rows::-webkit-scrollbar { width: 3px; }
   .abs-word-rows::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
-  .abs-word-row { display: grid; grid-template-columns: 1fr 30px; gap: 6px; align-items: center; }
+  .abs-word-row { display: grid; grid-template-columns: 1fr 52px 52px 30px; gap: 6px; align-items: center; }
   .abs-word-row input[type="text"] { background: var(--surface2); border: 1px solid var(--border); border-radius: 5px; color: var(--text); font-family: var(--font-mono); font-size: 12px; height: 28px; padding: 0 8px; outline: none; transition: border-color 0.15s; width: 100%; }
+  .abs-word-row input[type="number"] { background: var(--surface2); border: 1px solid var(--border); border-radius: 5px; font-family: var(--font-mono); font-size: 12px; height: 28px; padding: 0 4px; outline: none; transition: border-color 0.15s; width: 100%; text-align: center; }
   .abs-word-row input:focus { border-color: #ffc840; }
   .abs-add-btn { margin: 0.4rem 1.25rem 0.6rem; height: 28px; background: transparent; border: 1px dashed var(--border); border-radius: 5px; color: var(--text-muted); font-family: var(--font-mono); font-size: 11px; cursor: pointer; transition: all 0.15s; flex-shrink: 0; }
   .abs-add-btn:hover { border-color: #ffc840; color: #ffc840; background: #1a1400; }
@@ -641,7 +642,7 @@
       <div class="analytics-row2">
 
         <div class="analytics-card">
-          <span class="analytics-label has-info" data-info="PRONOUN TRACKER|Counts three pronoun groups across the text.|🔵 I/me/my = self-referential. High = venting or ego-forward writing.|🟢 You/your = reader-targeting. High = direct address, recruitment mode.|🟠 We/us/our = group formation. High = tribal building, shared identity.|Zero I/me + high you + high we/us/our = sermon or recruitment pattern.">Pronoun Tracker</span>
+          <span class="analytics-label has-info" data-info="PRONOUN TRACKER|Counts three pronoun groups across the text.|🔵 I/me/my = self-referential. High = venting or ego-forward writing.|🟢 You/your/yours = reader-targeting. High = direct address, recruitment mode.|🟠 We/us/our = group formation. High = tribal building, shared identity.|Zero I/me + high you + high we/us/our = sermon or recruitment pattern.">Pronoun Tracker</span>
           <div class="pronoun-bars">
             <div class="pronoun-row">
               <span class="pronoun-label">I/me</span>
@@ -649,7 +650,7 @@
               <span class="pronoun-count" id="p-self-n">0</span>
             </div>
             <div class="pronoun-row">
-              <span class="pronoun-label">you/your</span>
+              <span class="pronoun-label">you</span>
               <div class="pronoun-track"><div class="pronoun-fill you" id="p-you" style="width:0%"></div></div>
               <span class="pronoun-count" id="p-you-n">0</span>
             </div>
@@ -1045,7 +1046,7 @@
   });
 
   function exportDict() {
-    const data = { words: rows.map(r => ({ word: r.word, scoreNeg: r.scoreNeg, scorePos: r.scorePos })), absolutes: absolutesList };
+    const data = { words: rows.map(r => ({ word: r.word, scoreNeg: r.scoreNeg, scorePos: r.scorePos })), absolutes: absolutesList.map(e => ({ word: e.word, scoreNeg: e.scoreNeg, scorePos: e.scorePos })) };
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
@@ -1069,7 +1070,11 @@
               scorePos: r.scorePos !== undefined ? r.scorePos : (parseFloat(r.score) || 0)
             }));
           if (parsed.absolutes && Array.isArray(parsed.absolutes))
-            absolutesList = parsed.absolutes.map(w => String(w).toLowerCase().trim()).filter(w => w.length > 0);
+            absolutesList = parsed.absolutes.map(e =>
+              typeof e === 'string'
+                ? { word: e.toLowerCase().trim(), scoreNeg: null, scorePos: null }
+                : { word: String(e.word || '').toLowerCase().trim(), scoreNeg: e.scoreNeg ?? null, scorePos: e.scorePos ?? null }
+            ).filter(e => e.word.length > 0);
         }
         buildRows(); buildAbsoluteRows(); analyzeOnly();
       } catch { alert('Could not parse JSON file.'); }
@@ -1508,7 +1513,7 @@
     'entirely','only','nothing','everything','everyone','nobody','everywhere',
     'impossible','absolute','certain','definitely','undeniably','obviously',
     'clearly','literally','actually','perfectly','exactly','simply','just'
-  ];
+  ].map(w => ({ word: w, scoreNeg: null, scorePos: null }));
 
   let absPanelOpen = false;
 
@@ -1521,24 +1526,37 @@
   function buildAbsoluteRows() {
     const list = document.getElementById('abs-word-list');
     list.innerHTML = '';
-    absolutesList.forEach((word, i) => {
+    absolutesList.forEach((entry, i) => {
       const div = document.createElement('div');
       div.className = 'abs-word-row';
 
       const wi = document.createElement('input');
-      wi.type = 'text'; wi.value = word;
+      wi.type = 'text'; wi.value = entry.word;
       wi.addEventListener('input', e => {
-        absolutesList[i] = e.target.value.toLowerCase();
-        // Don't call analyzeOnly here — it triggers rebuildMarks which steals focus
+        absolutesList[i].word = e.target.value.toLowerCase();
       });
       wi.addEventListener('blur', () => {
-        absolutesList[i] = absolutesList[i].trim();
-        absolutesList = absolutesList.filter((w, idx) => w.length > 0 || idx === i);
-        // Only rebuild if this entry is now empty
-        if (!absolutesList[i] || absolutesList[i].length === 0) {
-          absolutesList = absolutesList.filter(w => w.length > 0);
+        absolutesList[i].word = absolutesList[i].word.trim();
+        if (!absolutesList[i].word) {
+          absolutesList = absolutesList.filter((_, idx) => idx !== i);
           buildAbsoluteRows();
         }
+        analyzeOnly();
+      });
+
+      const sn = document.createElement('input'); sn.type = 'number'; sn.placeholder = '−';
+      sn.value = entry.scoreNeg !== null && entry.scoreNeg !== undefined ? entry.scoreNeg : '';
+      sn.style.color = '#ff5c5c';
+      sn.addEventListener('input', e => {
+        absolutesList[i].scoreNeg = e.target.value !== '' ? parseFloat(e.target.value) : null;
+        analyzeOnly();
+      });
+
+      const sp = document.createElement('input'); sp.type = 'number'; sp.placeholder = '+';
+      sp.value = entry.scorePos !== null && entry.scorePos !== undefined ? entry.scorePos : '';
+      sp.style.color = 'var(--accent)';
+      sp.addEventListener('input', e => {
+        absolutesList[i].scorePos = e.target.value !== '' ? parseFloat(e.target.value) : null;
         analyzeOnly();
       });
 
@@ -1549,21 +1567,20 @@
         absolutesList.splice(i, 1); buildAbsoluteRows(); analyzeOnly();
       });
 
-      div.appendChild(wi); div.appendChild(db);
+      div.appendChild(wi); div.appendChild(sn); div.appendChild(sp); div.appendChild(db);
       list.appendChild(div);
     });
   }
 
   function addAbsoluteWord() {
-    absolutesList.push('');
+    absolutesList.push({ word: '', scoreNeg: null, scorePos: null });
     buildAbsoluteRows();
     const inputs = document.querySelectorAll('.abs-word-row input[type="text"]');
     inputs[inputs.length - 1].focus();
   }
 
   function updateAbsolutes(wordTokens) {
-    // Build set from live array instead of hardcoded list
-    const absSet = new Set(absolutesList.filter(w => w.length > 0));
+    const absSet = new Set(absolutesList.map(e => (e.word || e).toString().toLowerCase().trim()).filter(w => w.length > 0));
     const found = {};
     wordTokens.forEach(w => {
       const k = w.toLowerCase();
