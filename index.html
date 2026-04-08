@@ -955,14 +955,13 @@
       const wi = document.createElement('input'); wi.type = 'text'; wi.placeholder = 'word or char...'; wi.value = r.word;
       wi.addEventListener('input', e => { r.word = e.target.value; analyzeOnly(); });
       wi.addEventListener('blur', e => {
-        // Don't sort if focus moved to a number input in the same row
         const next = e.relatedTarget;
-        if (next && div.contains(next)) return;
+        if (next && div.contains(next)) return; // staying in same row — don't sort yet
         rows.sort((a, b) => a.word.toLowerCase().localeCompare(b.word.toLowerCase()));
         buildRows(); analyzeOnly();
       });
 
-      // Negative value input — use word ref not index to avoid stale closure
+      // Negative value input
       const sn = document.createElement('input'); sn.type = 'number'; sn.placeholder = '−';
       sn.value = r.scoreNeg !== undefined && r.scoreNeg !== null ? r.scoreNeg : '';
       sn.style.color = '#ff5c5c';
@@ -971,8 +970,14 @@
         if (row) row.scoreNeg = e.target.value !== '' ? parseFloat(e.target.value) : null;
         analyzeOnly();
       });
+      sn.addEventListener('blur', e => {
+        const next = e.relatedTarget;
+        if (next && div.contains(next)) return;
+        rows.sort((a, b) => a.word.toLowerCase().localeCompare(b.word.toLowerCase()));
+        buildRows(); analyzeOnly();
+      });
 
-      // Positive value input — use word ref not index to avoid stale closure
+      // Positive value input
       const sp = document.createElement('input'); sp.type = 'number'; sp.placeholder = '+';
       sp.value = r.scorePos !== undefined && r.scorePos !== null ? r.scorePos : '';
       sp.style.color = 'var(--accent)';
@@ -980,6 +985,12 @@
         const row = rows.find(x => x === r);
         if (row) row.scorePos = e.target.value !== '' ? parseFloat(e.target.value) : null;
         analyzeOnly();
+      });
+      sp.addEventListener('blur', e => {
+        const next = e.relatedTarget;
+        if (next && div.contains(next)) return;
+        rows.sort((a, b) => a.word.toLowerCase().localeCompare(b.word.toLowerCase()));
+        buildRows(); analyzeOnly();
       });
 
       const db = document.createElement('button'); db.className = 'del-btn'; db.textContent = '×';
@@ -1361,13 +1372,13 @@
       wi.type = 'text'; wi.value = word;
       wi.addEventListener('input', e => {
         absolutesList[i] = e.target.value.toLowerCase();
-        analyzeOnly();
+        // Don't call analyzeOnly here — it triggers rebuildMarks which steals focus
       });
       wi.addEventListener('blur', () => {
-        // Only clean up empties — don't rebuild while user is mid-type
         absolutesList[i] = absolutesList[i].trim();
-        const hadEmpty = absolutesList.some(w => w.length === 0);
-        if (hadEmpty) {
+        absolutesList = absolutesList.filter((w, idx) => w.length > 0 || idx === i);
+        // Only rebuild if this entry is now empty
+        if (!absolutesList[i] || absolutesList[i].length === 0) {
           absolutesList = absolutesList.filter(w => w.length > 0);
           buildAbsoluteRows();
         }
