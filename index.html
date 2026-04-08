@@ -29,7 +29,7 @@
   .dict-actions { display: flex; gap: 4px; }
   .dict-btn { width: 26px; height: 26px; border-radius: 5px; border: 1px solid var(--border); background: transparent; color: var(--text-dim); cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 13px; transition: all 0.15s; position: relative; }
   .dict-btn:hover { border-color: var(--accent-dim); color: var(--accent); background: #1a2200; }
-  .dict-btn[data-tip]:hover::after { content: attr(data-tip); position: absolute; bottom: calc(100% + 5px); right: 0; background: var(--surface2); border: 1px solid var(--border); border-radius: 4px; padding: 3px 8px; font-size: 10px; color: var(--text); white-space: nowrap; pointer-events: none; z-index: 100; font-family: var(--font-mono); letter-spacing: 0.04em; }
+  .dict-btn[data-tip]:hover::after { content: attr(data-tip); position: absolute; top: calc(100% + 5px); right: 0; background: var(--surface2); border: 1px solid var(--border); border-radius: 4px; padding: 3px 8px; font-size: 10px; color: var(--text); white-space: nowrap; pointer-events: none; z-index: 100; font-family: var(--font-mono); letter-spacing: 0.04em; }
 
   .preset-wrap { position: relative; }
   .preset-menu { display: none; position: absolute; top: calc(100% + 4px); right: 0; background: var(--surface2); border: 1px solid var(--border); border-radius: 6px; padding: 4px; z-index: 200; min-width: 150px; }
@@ -373,6 +373,28 @@
 
   #dict-file-input { display: none; }
 
+  /* README MODAL */
+  .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.75); z-index: 2000; align-items: center; justify-content: center; }
+  .modal-overlay.open { display: flex; }
+  .modal-box { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; width: 680px; max-width: 94vw; max-height: 85vh; display: flex; flex-direction: column; box-shadow: 0 24px 64px rgba(0,0,0,0.6); }
+  .modal-header { display: flex; align-items: center; justify-content: space-between; padding: 1.2rem 1.5rem; border-bottom: 1px solid var(--border); flex-shrink: 0; }
+  .modal-title { font-family: var(--font-head); font-size: 1.1rem; font-weight: 700; color: var(--accent); letter-spacing: -0.02em; }
+  .modal-close { background: transparent; border: 1px solid var(--border); border-radius: 6px; color: var(--text-muted); font-size: 16px; width: 32px; height: 32px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.15s; }
+  .modal-close:hover { border-color: var(--danger); color: var(--danger); background: #2a0a0a; }
+  .modal-body { overflow-y: auto; padding: 1.5rem; display: flex; flex-direction: column; gap: 1.2rem; scrollbar-width: thin; scrollbar-color: var(--border) transparent; }
+  .modal-body::-webkit-scrollbar { width: 3px; }
+  .modal-body::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+  .modal-section { display: flex; flex-direction: column; gap: 6px; }
+  .modal-section-title { font-family: var(--font-head); font-size: 11px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: var(--accent); }
+  .modal-section p { font-size: 12px; color: var(--text-muted); font-family: var(--font-mono); line-height: 1.7; }
+  .modal-section p strong { color: var(--text); font-weight: 500; }
+  .modal-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .modal-metric { background: var(--bg); border: 1px solid var(--border); border-radius: 6px; padding: 0.6rem 0.8rem; }
+  .modal-metric-name { font-size: 10px; font-weight: 700; color: var(--accent); font-family: var(--font-head); letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 3px; }
+  .modal-metric-desc { font-size: 11px; color: var(--text-muted); font-family: var(--font-mono); line-height: 1.6; }
+  .help-btn { background: transparent; border: 1px solid var(--border); border-radius: 6px; color: var(--text-muted); font-family: var(--font-mono); font-size: 12px; padding: 2px 10px; cursor: pointer; transition: all 0.15s; margin-left: auto; }
+  .help-btn:hover { border-color: var(--accent-dim); color: var(--accent); background: #1a2200; }
+
   /* ABSOLUTES LIST SECTION */
   .abs-panel { border-top: 1px solid var(--border); display: flex; flex-direction: column; flex-shrink: 0; }
   .abs-panel-header { padding: 0.6rem 1.25rem; display: flex; align-items: center; justify-content: space-between; cursor: pointer; user-select: none; }
@@ -397,7 +419,76 @@
 <header>
   <h1>Word Scorer</h1>
   <span>assign values · paste text · get score</span>
+  <button class="help-btn" onclick="toggleReadme()">? readme</button>
 </header>
+
+<!-- README MODAL -->
+<div class="modal-overlay" id="readme-modal" onclick="closeReadmeOnOverlay(event)">
+  <div class="modal-box">
+    <div class="modal-header">
+      <span class="modal-title">Word Scorer — How It Works</span>
+      <button class="modal-close" onclick="toggleReadme()">×</button>
+    </div>
+    <div class="modal-body">
+
+      <div class="modal-section">
+        <div class="modal-section-title">What is Word Scorer?</div>
+        <p>Word Scorer is a <strong>user-defined emotional mechanics engine</strong>. You assign weights to words. The engine measures how those words behave across your text — their mass, velocity, density, pacing, and distribution. It doesn't tell you what your text means. It shows you what your text <strong>does</strong>.</p>
+        <p>Core philosophy: <strong>"My weights aren't your weights."</strong> The dictionary is yours. The tool just measures.</p>
+      </div>
+
+      <div class="modal-section">
+        <div class="modal-section-title">The Dictionary</div>
+        <p>Every word has two value columns: <strong style="color:#ff5c5c">− negative</strong> and <strong style="color:#c8f135">+ positive</strong>. Fill one or both.</p>
+        <p>If only the <strong>positive</strong> value is filled, the word scores normally. If only the <strong>negative</strong> value is filled, it subtracts from the score (when polarity is on). If <strong>both</strong> are filled, the word becomes a <strong>dual word</strong> — enabling the Duality Score panel to show two parallel readings of the text.</p>
+        <p>Words sort alphabetically when you leave a row. Import and export your dictionary as JSON to save and share your emotional fingerprint.</p>
+      </div>
+
+      <div class="modal-section">
+        <div class="modal-section-title">Velocity & Chains</div>
+        <p>When consecutive words both score at or above the <strong>velocity threshold</strong>, they form a chain. Instead of adding their values, the engine multiplies them exponentially using the <strong>chain multiplier</strong>.</p>
+        <p>At multiplier ×2.0: a 2-word chain scores ×2, a 3-word chain scores ×4, a 4-word chain scores ×8. The <strong>velocity bonus</strong> is the extra points added on top of the base score. Toggle velocity off to see pure base weight only.</p>
+      </div>
+
+      <div class="modal-section">
+        <div class="modal-section-title">Toggles</div>
+        <p><strong>Velocity on/off</strong> — disables chain bonuses. Total score becomes pure base weight.<br>
+        <strong>Polarity on/off</strong> — when off, all negative values are treated as positive. Measures emotional intensity regardless of direction.<br>
+        <strong>Caps scoring</strong> — when on, ALL CAPS dictionary words score 1.5× their base value.<br>
+        <strong>Highlights on/off</strong> — toggles colour highlights in the text area.</p>
+      </div>
+
+      <div class="modal-section">
+        <div class="modal-section-title">Metrics Reference</div>
+        <div class="modal-grid">
+          <div class="modal-metric"><div class="modal-metric-name">Intensity Map</div><div class="modal-metric-desc">Heatmap of score density across the text. Orange = high concentration. Green = low.</div></div>
+          <div class="modal-metric"><div class="modal-metric-name">Velocity Ratio</div><div class="modal-metric-desc">% of total score from chain bonuses. High = emotion is feeding itself. Low = words are placed deliberately.</div></div>
+          <div class="modal-metric"><div class="modal-metric-name">Pronoun Tracker</div><div class="modal-metric-desc">I/me vs you/your vs we/our counts. Zero I/me + high you + high we = recruitment or sermon pattern.</div></div>
+          <div class="modal-metric"><div class="modal-metric-name">Tone vs Mass</div><div class="modal-metric-desc">Gap between calm tone and heavy payload. High = controlled rhetoric delivered in measured language.</div></div>
+          <div class="modal-metric"><div class="modal-metric-name">Draft vs Rant</div><div class="modal-metric-desc">Was this constructed deliberately or vented emotionally? Based on velocity ratio and repetition density.</div></div>
+          <div class="modal-metric"><div class="modal-metric-name">Authorship Fingerprint</div><div class="modal-metric-desc">Sermon · Rant · Persuasion · Essay · Neutral — synthesised from all structural signals.</div></div>
+          <div class="modal-metric"><div class="modal-metric-name">Spike Distance (SDI)</div><div class="modal-metric-desc">Gap between emotional spikes. Surgical = isolated precision. Massed = clustered avalanche. Distributed = controlled even spread.</div></div>
+          <div class="modal-metric"><div class="modal-metric-name">Text Weight</div><div class="modal-metric-desc">Raw base mass with no bonuses. Shows which words carry the most weight and their % of total.</div></div>
+          <div class="modal-metric"><div class="modal-metric-name">Polarity Composite</div><div class="modal-metric-desc">Positive vs negative weight split. Tension = how hard the text pulls in both directions simultaneously.</div></div>
+          <div class="modal-metric"><div class="modal-metric-name">Duality Score</div><div class="modal-metric-desc">For dual words: Score A (negative reading) vs Score B (positive reading). Range = interpretive ambiguity.</div></div>
+          <div class="modal-metric"><div class="modal-metric-name">Absolutes Counter</div><div class="modal-metric-desc">Certainty words — none, never, always, every, etc. High count = closed worldview, no nuance available.</div></div>
+          <div class="modal-metric"><div class="modal-metric-name">Hedge Density</div><div class="modal-metric-desc">Uncertainty words — maybe, perhaps, might, seems, etc. High hedging in high-mass text = anxious or deliberately vague.</div></div>
+          <div class="modal-metric"><div class="modal-metric-name">Imperative Counter</div><div class="modal-metric-desc">Command-form sentences. High imperatives in calm drafted text = orders disguised as comfort.</div></div>
+          <div class="modal-metric"><div class="modal-metric-name">Sentence Openers</div><div class="modal-metric-desc">What word starts each sentence. I/me = self-focused. You = reader-targeting. We/our = collectivising.</div></div>
+        </div>
+      </div>
+
+      <div class="modal-section">
+        <div class="modal-section-title">Tips</div>
+        <p><strong>Export stats</strong> — click "↓ export stats" below the badge strip to download a full JSON snapshot of all metrics for auditing or comparison.</p>
+        <p><strong>Import a dictionary</strong> — load someone else's dictionary to score text through their emotional lens. This is the empathy engine — inhabiting another person's native emotional tone.</p>
+        <p><strong>The teaching challenge</strong> — write something emotionally resonant using only low-weight words and short sentences. Low score, high feeling. That's the craft.</p>
+        <p><strong>Hover any metric label</strong> for a detailed explanation of what it measures, what the colours mean, and how to interpret high vs low values.</p>
+      </div>
+
+    </div>
+  </div>
+</div>
 
 <div id="info-tooltip" class="info-tooltip"></div>
 
@@ -824,6 +915,13 @@
   let velocityThreshold = 10;
   let velMultiplier     = 2.0; // base for Math.pow(velMultiplier, length-1)
   let peakStreak = null;
+  function toggleReadme() {
+    document.getElementById('readme-modal').classList.toggle('open');
+  }
+  function closeReadmeOnOverlay(e) {
+    if (e.target === document.getElementById('readme-modal')) toggleReadme();
+  }
+
   let highlightOn  = true;
   let velocityOn   = true;
   let capsScoring  = false;
