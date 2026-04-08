@@ -543,6 +543,7 @@
       <span style="color:var(--text-dim);font-size:10px;white-space:nowrap;" id="mult-preview"></span>
       <button class="hl-toggle-btn active" id="vel-toggle" onclick="toggleVelocity()">velocity on</button>
       <button class="hl-toggle-btn active" id="polarity-toggle" onclick="togglePolarity()">polarity on</button>
+      <button class="hl-toggle-btn active" id="wholeword-toggle" onclick="toggleWholeWord()">whole word on</button>
     </div>
 
     <div class="text-area-wrap">
@@ -635,7 +636,7 @@
               <span class="pronoun-count" id="p-self-n">0</span>
             </div>
             <div class="pronoun-row">
-              <span class="pronoun-label">you</span>
+              <span class="pronoun-label">you/your</span>
               <div class="pronoun-track"><div class="pronoun-fill you" id="p-you" style="width:0%"></div></div>
               <span class="pronoun-count" id="p-you-n">0</span>
             </div>
@@ -925,7 +926,16 @@
   let highlightOn  = true;
   let velocityOn   = true;
   let capsScoring  = false;
-  let polarityOn   = true; // when off, all scores treated as absolute values
+  let polarityOn   = true;
+  let wholeWordOnly = true; // single alphabetic letters only score as standalone tokens
+
+  function toggleWholeWord() {
+    wholeWordOnly = !wholeWordOnly;
+    const btn = document.getElementById('wholeword-toggle');
+    btn.textContent = wholeWordOnly ? 'whole word on' : 'whole word off';
+    btn.classList.toggle('active', wholeWordOnly);
+    analyzeOnly();
+  } // when off, all scores treated as absolute values
 
   function togglePolarity() {
     polarityOn = !polarityOn;
@@ -2166,7 +2176,15 @@
     });
     const charDict = {}, wordDict = {};
     Object.entries(dict).forEach(([k, v]) => {
-      if ([...k].length === 1) { charDict[k] = v; wordDict[k] = v; } else wordDict[k] = v;
+      if ([...k].length === 1) {
+        if (wholeWordOnly && /^[a-zA-Z]$/.test(k)) {
+          wordDict[k] = v; // standalone only — won't fire inside longer words
+        } else {
+          charDict[k] = v; wordDict[k] = v;
+        }
+      } else {
+        wordDict[k] = v;
+      }
     });
 
     // Layer 1 — word tokens
