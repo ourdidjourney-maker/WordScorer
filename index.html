@@ -259,6 +259,19 @@
   .duality-words { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
   .duality-badge { font-size: 10px; padding: 2px 8px; border-radius: 999px; background: #1a1400; color: #ffc840; border: 1px solid #554400; font-family: var(--font-mono); }
 
+  /* POTENTIAL RANGE */
+  .potential-panel { margin-top: 8px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 0.5rem 0.9rem; }
+  .potential-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 8px; }
+  .potential-metric { background: var(--bg); border: 1px solid var(--border); border-radius: 6px; padding: 0.5rem 0.7rem; }
+  .potential-metric-label { font-size: 9px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-dim); font-family: var(--font-head); font-weight: 600; margin-bottom: 3px; }
+  .potential-metric-val { font-size: 16px; font-weight: 500; font-family: var(--font-head); letter-spacing: -0.02em; color: var(--text); }
+  .potential-metric-val.max   { color: var(--accent); }
+  .potential-metric-val.min   { color: #ff5c5c; }
+  .potential-metric-val.mid   { color: #5cb8ff; }
+  .potential-metric-val.range { color: #ffc840; }
+  .potential-words { display: flex; flex-wrap: wrap; gap: 4px; }
+  .potential-badge { font-size: 10px; padding: 2px 8px; border-radius: 999px; background: #001220; color: #5cb8ff; border: 1px solid #003355; font-family: var(--font-mono); }
+
   .analytics-row4 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 8px; }
   .hedge-count  { font-size: 22px; font-weight: 500; font-family: var(--font-head); letter-spacing: -0.02em; color: var(--text); transition: color 0.3s; }
   .hedge-count.low    { color: var(--accent); }
@@ -484,6 +497,8 @@
           <div class="modal-metric"><div class="modal-metric-name">Hedge Density</div><div class="modal-metric-desc">Uncertainty words — maybe, perhaps, might, seems, etc. High hedging in high-mass text = anxious or deliberately vague.</div></div>
           <div class="modal-metric"><div class="modal-metric-name">Imperative Counter</div><div class="modal-metric-desc">Command-form sentences. High imperatives in calm drafted text = orders disguised as comfort.</div></div>
           <div class="modal-metric"><div class="modal-metric-name">Sentence Openers</div><div class="modal-metric-desc">What word starts each sentence. I/me = self-focused. You = reader-targeting. We/our = collectivising.</div></div>
+          <div class="modal-metric"><div class="modal-metric-name">Char Density</div><div class="modal-metric-desc">Total character count shown in the top bar — with spaces and without. Avg word length shown as a subtitle. Low avg = punchy/simple. High avg = complex/academic.</div></div>
+          <div class="modal-metric"><div class="modal-metric-name">Character Breakdown</div><div class="modal-metric-desc">Full character analysis — with spaces, no spaces, letters only, symbols only. Symbols = punctuation, emoticons, special characters. Shows how much of the text is pure language vs emphasis and decoration.</div></div>
         </div>
       </div>
 
@@ -895,6 +910,35 @@
         </div>
         <div class="duality-words" id="dual-words">
           <span style="font-size:10px;color:var(--text-dim)">no dual words defined</span>
+        </div>
+      </div>
+
+      <!-- POTENTIAL RANGE -->
+      <div class="potential-panel">
+        <div class="sb-header" style="margin-bottom:8px;">
+          <span class="analytics-label has-info" data-info="POTENTIAL RANGE|Studies the maximum, minimum and midpoint potential of every word in the text based on your dictionary values.|Max = best case reading — sum of highest value for each matched word.|Min = worst case reading — sum of lowest value for each matched word.|Mid = arithmetic midpoint between max and min.|Range = the gap between max and min — how much this text could swing depending on context.|Words with only one value contribute that value to both max and min.">Potential Range</span>
+          <span style="font-size:10px;color:var(--text-dim);font-family:var(--font-mono)" id="pr-note">—</span>
+        </div>
+        <div class="potential-grid">
+          <div class="potential-metric">
+            <div class="potential-metric-label">Maximum</div>
+            <div class="potential-metric-val max" id="pr-max">—</div>
+          </div>
+          <div class="potential-metric">
+            <div class="potential-metric-label">Minimum</div>
+            <div class="potential-metric-val min" id="pr-min">—</div>
+          </div>
+          <div class="potential-metric">
+            <div class="potential-metric-label">Midpoint</div>
+            <div class="potential-metric-val mid" id="pr-mid">—</div>
+          </div>
+          <div class="potential-metric">
+            <div class="potential-metric-label">Range</div>
+            <div class="potential-metric-val range" id="pr-range">—</div>
+          </div>
+        </div>
+        <div class="potential-words" id="pr-words">
+          <span style="font-size:10px;color:var(--text-dim)">paste text to see potential range</span>
         </div>
       </div>
 
@@ -2225,6 +2269,91 @@
     if (subEl)   subEl.textContent   = withSpaces > 0 ? `${noSpaces} no spaces · ${avgWordLen} per word` : '—';
   }
 
+  // ── POTENTIAL RANGE ───────────────────────────────────────────────────
+  // For every word in the text that has dictionary values, calculate:
+  // Max = sum of highest value per word (best case reading)
+  // Min = sum of lowest value per word (worst case reading)
+  // Mid = (max + min) / 2
+  // Range = max - min
+  function updatePotentialRange(wordTokens, charTokens) {
+    const maxEl   = document.getElementById('pr-max');
+    const minEl   = document.getElementById('pr-min');
+    const midEl   = document.getElementById('pr-mid');
+    const rangeEl = document.getElementById('pr-range');
+    const wordsEl = document.getElementById('pr-words');
+    const noteEl  = document.getElementById('pr-note');
+
+    if (!wordTokens.length) {
+      [maxEl, minEl, midEl, rangeEl].forEach(el => el.textContent = '—');
+      wordsEl.innerHTML = '<span style="font-size:10px;color:var(--text-dim)">paste text to see potential range</span>';
+      noteEl.textContent = '—'; return;
+    }
+
+    let totalMax = 0, totalMin = 0;
+    const contributions = {};
+
+    // Process word tokens
+    wordTokens.forEach(w => {
+      const key = w.toLowerCase();
+      const row = rows.find(r => r.word.toLowerCase() === key);
+      if (!row) return;
+
+      const pos = row.scorePos !== null && row.scorePos !== undefined ? parseFloat(row.scorePos) : null;
+      const neg = row.scoreNeg !== null && row.scoreNeg !== undefined ? parseFloat(row.scoreNeg) : null;
+
+      if (pos === null && neg === null) return;
+
+      // Max = highest value, Min = lowest value
+      const hi = pos !== null && neg !== null ? Math.max(pos, neg) : (pos ?? neg);
+      const lo = pos !== null && neg !== null ? Math.min(pos, neg) : (pos ?? neg);
+
+      totalMax += hi;
+      totalMin += lo;
+
+      if (!contributions[key]) contributions[key] = { hi, lo, count: 0 };
+      contributions[key].count++;
+    });
+
+    // Char tokens
+    charTokens.forEach(c => {
+      const key = c.toLowerCase();
+      const row = rows.find(r => r.word.toLowerCase() === key && r.word.length === 1);
+      if (!row) return;
+      const pos = row.scorePos !== null && row.scorePos !== undefined ? parseFloat(row.scorePos) : null;
+      const neg = row.scoreNeg !== null && row.scoreNeg !== undefined ? parseFloat(row.scoreNeg) : null;
+      if (pos === null && neg === null) return;
+      const hi = pos !== null && neg !== null ? Math.max(pos, neg) : (pos ?? neg);
+      const lo = pos !== null && neg !== null ? Math.min(pos, neg) : (pos ?? neg);
+      totalMax += hi; totalMin += lo;
+    });
+
+    if (Object.keys(contributions).length === 0) {
+      [maxEl, minEl, midEl, rangeEl].forEach(el => el.textContent = '—');
+      wordsEl.innerHTML = '<span style="font-size:10px;color:var(--text-dim)">no dictionary words found in text</span>';
+      noteEl.textContent = '—'; return;
+    }
+
+    const mid   = (totalMax + totalMin) / 2;
+    const range = totalMax - totalMin;
+
+    maxEl.textContent   = totalMax >= 0 ? '+' + fmt(totalMax) : fmt(totalMax);
+    minEl.textContent   = totalMin >= 0 ? '+' + fmt(totalMin) : fmt(totalMin);
+    midEl.textContent   = mid >= 0 ? '+' + fmt(Math.round(mid * 10) / 10) : fmt(Math.round(mid * 10) / 10);
+    rangeEl.textContent = fmt(Math.round(range * 10) / 10);
+    noteEl.textContent  = `${Object.keys(contributions).length} word${Object.keys(contributions).length !== 1 ? 's' : ''} studied`;
+
+    // Show each word's contribution
+    wordsEl.innerHTML = '';
+    Object.entries(contributions).sort((a,b) => Math.abs(b[1].hi - b[1].lo) - Math.abs(a[1].hi - a[1].lo))
+      .forEach(([word, d]) => {
+        const b = document.createElement('span'); b.className = 'potential-badge';
+        const swing = d.hi - d.lo;
+        b.textContent = `${word}${d.count > 1 ? ' ×'+d.count : ''} (${d.lo >= 0 ? '+' : ''}${fmt(d.lo)} → ${d.hi >= 0 ? '+' : ''}${fmt(d.hi)})`;
+        b.title = `swing: ${fmt(swing)}`;
+        wordsEl.appendChild(b);
+      });
+  }
+
   function analyzeOnly() {
     const raw = getRawText();
     if (!raw.trim()) peakStreak = null;
@@ -2368,6 +2497,7 @@
     updateTextWeight(wordTokens, charTokens, wordDict, charDict, grandTotal);
     updatePolarityComposite(wordTokens, charTokens, wordDict, charDict);
     updateDualityScore(wordTokens, charTokens);
+    updatePotentialRange(wordTokens, charTokens);
     const raw3 = getRawText();
     updateHedgeDensity(wordTokens);
     updateImperativeCounter(raw3);
