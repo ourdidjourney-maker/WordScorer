@@ -503,8 +503,7 @@
           <button class="dict-btn" id="preset-btn" data-tip="load preset" onclick="togglePresets()">☰</button>
           <div class="preset-menu" id="preset-menu">
             <button class="preset-item" onclick="loadPreset('intensity')">⚡ Intensity</button>
-            <button class="preset-item" onclick="loadPreset('sentiment')">💬 Sentiment</button>
-            <button class="preset-item" onclick="loadPreset('clear')">✕ Clear all</button>
+            <button class="preset-item" onclick="loadPreset('clear')">↺ Restore defaults</button>
           </div>
         </div>
         <button class="dict-btn" data-tip="import JSON" onclick="document.getElementById('dict-file-input').click()">↑</button>
@@ -959,21 +958,25 @@
     analyzeOnly();
   }
 
+  const DEFAULT_ROWS = [
+    { word: 'the',   scoreNeg: -2, scorePos: 2 },
+    { word: 'maybe', scoreNeg: -1, scorePos: 1 },
+    { word: 'and',   scoreNeg: -1, scorePos: 1 },
+  ];
+
   // ── PRESETS ──────────────────────────────────────────────────────────
   const PRESETS = {
     intensity: [
-      { word: 'fuck', score: 20 }, { word: 'fucking', score: 25 },
-      { word: 'shit', score: 15 }, { word: 'damn', score: 10 },
-      { word: 'hell', score: 8 },  { word: 'ass', score: 12 },
-      { word: 'bitch', score: 20 },{ word: 'crap', score: 5 },
-      { word: '!', score: 10 },    { word: '?', score: 5 },
-    ],
-    sentiment: [
-      { word: 'love', score: 10 },    { word: 'hate', score: 10 },
-      { word: 'amazing', score: 8 },  { word: 'terrible', score: 8 },
-      { word: 'great', score: 5 },    { word: 'awful', score: 5 },
-      { word: 'never', score: 6 },    { word: 'always', score: 6 },
-      { word: 'every', score: 4 },    { word: 'nothing', score: 7 },
+      { word: 'fuck',    scoreNeg: -20, scorePos: 20 },
+      { word: 'fucking', scoreNeg: -25, scorePos: 25 },
+      { word: 'shit',    scoreNeg: -15, scorePos: 15 },
+      { word: 'damn',    scoreNeg: -10, scorePos: 10 },
+      { word: 'hell',    scoreNeg: -8,  scorePos: 8  },
+      { word: 'ass',     scoreNeg: -12, scorePos: 12 },
+      { word: 'bitch',   scoreNeg: -20, scorePos: 20 },
+      { word: 'crap',    scoreNeg: -5,  scorePos: 5  },
+      { word: '!',       scoreNeg: -10, scorePos: 10 },
+      { word: '?',       scoreNeg: -5,  scorePos: 5  },
     ],
   };
 
@@ -982,7 +985,10 @@
   }
   function loadPreset(name) {
     document.getElementById('preset-menu').classList.remove('open');
-    if (name === 'clear') { rows = []; buildRows(); analyzeOnly(); return; }
+    if (name === 'clear') {
+      rows = DEFAULT_ROWS.map(r => ({ ...r }));
+      buildRows(); analyzeOnly(); return;
+    }
     rows = PRESETS[name].map(r => ({ ...r }));
     buildRows(); analyzeOnly();
   }
