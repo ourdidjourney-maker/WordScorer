@@ -2517,70 +2517,105 @@
       return el ? el.textContent.trim() : '—';
     };
 
-    // Collect sentence breakdown
+    // Sentence breakdown
     const sentenceRows = [];
     document.querySelectorAll('.sb-row').forEach(row => {
       const cells = row.querySelectorAll('span');
       if (cells.length >= 4) sentenceRows.push({
-        rank:    cells[0].textContent.trim(),
-        text:    cells[1].textContent.trim(),
-        score:   cells[2].textContent.trim(),
-        density: cells[3].textContent.trim()
+        rank: cells[0].textContent.trim(), text: cells[1].textContent.trim(),
+        score: cells[2].textContent.trim(), density: cells[3].textContent.trim()
       });
     });
 
-    // Collect word hits from badge strip
+    // Word hits and velocity chains
     const wordHits = [];
     document.querySelectorAll('.hit-badge').forEach(b => wordHits.push(b.textContent.trim()));
     const velChains = [];
     document.querySelectorAll('.vel-badge').forEach(b => velChains.push(b.textContent.trim()));
 
-    // Collect repeated words
+    // Repeated words
     const repeated = [];
     document.querySelectorAll('.repeat-badge').forEach(b => repeated.push(b.textContent.trim()));
 
-    // Collect caps words
+    // Caps words
     const capsWords = [];
     document.querySelectorAll('.caps-badge').forEach(b => capsWords.push(b.textContent.trim()));
 
-    // Collect text weight contributors
+    // Dual words
+    const dualWords = [];
+    document.querySelectorAll('.duality-badge').forEach(b => dualWords.push(b.textContent.trim()));
+
+    // Potential range words
+    const potentialWords = [];
+    document.querySelectorAll('.potential-badge').forEach(b => potentialWords.push(b.textContent.trim()));
+
+    // Hedge words
+    const hedgeWords = [];
+    document.querySelectorAll('.hedge-badge').forEach(b => hedgeWords.push(b.textContent.trim()));
+
+    // Imperative sentences
+    const imperatives = [];
+    document.querySelectorAll('.imp-item').forEach(b => imperatives.push(b.textContent.trim()));
+
+    // Text weight contributors
     const weightContribs = [];
     document.querySelectorAll('.tw-contrib-row').forEach(row => {
       const word  = row.querySelector('.tw-contrib-word');
       const score = row.querySelector('.tw-contrib-score');
       const pct   = row.querySelector('.tw-contrib-pct');
       if (word && score && pct) weightContribs.push({
-        word:  word.textContent.trim(),
-        score: score.textContent.trim(),
-        pct:   pct.textContent.trim()
+        word: word.textContent.trim(), score: score.textContent.trim(), pct: pct.textContent.trim()
       });
     });
 
     const snapshot = {
       meta: {
-        exported:       new Date().toISOString(),
-        textLength:     raw.length,
+        exported:          new Date().toISOString(),
+        textLength:        raw.length,
         velocityOn,
         polarityOn,
         capsScoring,
-        velocityThreshold
+        wholeWordOnly,
+        velocityThreshold,
+        velMultiplier
       },
       text: raw,
-      dictionary: rows.map(r => ({ word: r.word, score: r.score })),
+      dictionary: rows.map(r => ({ word: r.word, scoreNeg: r.scoreNeg, scorePos: r.scorePos })),
       scores: {
         totalScore:    get('total-score'),
         velocityBonus: get('velocity-bonus'),
         wordsMatched:  get('matched-count'),
-        totalWords:    get('total-words')
+        totalWords:    get('total-words'),
+        charDensity: {
+          withSpaces:   get('cb-with-spaces'),
+          noSpaces:     get('cb-no-spaces'),
+          letters:      get('cb-letters'),
+          symbols:      get('cb-symbols'),
+          avgWordLength: get('char-per-word')
+        }
       },
       wordHits,
       velocityChains: velChains,
       analytics: {
-        velocityRatio:        get('ratio-pct'),
-        draftVsRant:          get('dvr-marker'),
-        toneVsMass:           get('mismatch-val'),
-        authorshipFingerprint:get('fp-label'),
-        absolutesCount:       get('abs-count'),
+        velocityRatio:         get('ratio-pct'),
+        draftVsRant:           get('dvr-marker'),
+        toneVsMass:            get('mismatch-val'),
+        authorshipFingerprint: get('fp-label'),
+        absolutesCount:        get('abs-count'),
+        hedgeDensity: {
+          count: get('hedge-count'),
+          words: hedgeWords
+        },
+        imperativeCounter: {
+          count:     get('imp-count'),
+          sentences: imperatives
+        },
+        sentenceOpeners: {
+          selfIMe:  get('op-self-n'),
+          you:      get('op-you-n'),
+          weOur:    get('op-we-n'),
+          other:    get('op-other-n')
+        },
         peakStreak: {
           value: get('peak-val'),
           chain: get('peak-chain')
@@ -2602,12 +2637,31 @@
           pattern:    get('sd-pattern-val')
         },
         textWeight: {
-          total:      get('tw-total'),
-          perWord:    get('tw-per-word'),
-          heaviest:   get('tw-heaviest'),
-          pctOfScore: get('tw-pct-score'),
-          coverage:   get('tw-coverage'),
+          total:           get('tw-total'),
+          perWord:         get('tw-per-word'),
+          heaviest:        get('tw-heaviest'),
+          pctOfScore:      get('tw-pct-score'),
+          coverage:        get('tw-coverage'),
           topContributors: weightContribs
+        },
+        polarityComposite: {
+          positiveWeight: get('pc-positive'),
+          negativeWeight: get('pc-negative'),
+          netScore:       get('pc-net'),
+          tension:        get('pc-tension')
+        },
+        dualityScore: {
+          scoreA:    get('dual-score-a'),
+          scoreB:    get('dual-score-b'),
+          range:     get('dual-range'),
+          dualWords: dualWords
+        },
+        potentialRange: {
+          maximum:  get('pr-max'),
+          minimum:  get('pr-min'),
+          midpoint: get('pr-mid'),
+          range:    get('pr-range'),
+          words:    potentialWords
         },
         caps: {
           count:     get('caps-count'),
