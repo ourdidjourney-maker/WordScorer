@@ -434,6 +434,30 @@
   .abs-word-row input:focus { border-color: #ffc840; }
   .abs-add-btn { margin: 0.4rem 1.25rem 0.6rem; height: 28px; background: transparent; border: 1px dashed var(--border); border-radius: 5px; color: var(--text-muted); font-family: var(--font-mono); font-size: 11px; cursor: pointer; transition: all 0.15s; flex-shrink: 0; }
   .abs-add-btn:hover { border-color: #ffc840; color: #ffc840; background: #1a1400; }
+
+  /* CUSTOM TOKENS */
+  .token-panel { border-top: 1px solid var(--border); display: flex; flex-direction: column; flex-shrink: 0; }
+  .token-panel-header { padding: 0.6rem 1.25rem; display: flex; align-items: center; justify-content: space-between; cursor: pointer; user-select: none; }
+  .token-panel-header:hover { background: var(--surface2); }
+  .token-panel-title { font-family: var(--font-head); font-size: 11px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: var(--text-muted); }
+  .token-toggle-icon { font-size: 10px; color: var(--text-dim); transition: transform 0.2s; }
+  .token-toggle-icon.open { transform: rotate(180deg); }
+  .token-body { display: none; flex-direction: column; }
+  .token-body.open { display: flex; }
+  .token-word-rows { max-height: 140px; overflow-y: auto; padding: 0.4rem 1.25rem; display: flex; flex-direction: column; gap: 4px; scrollbar-width: thin; scrollbar-color: var(--border) transparent; }
+  .token-word-rows::-webkit-scrollbar { width: 3px; }
+  .token-word-rows::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+  .token-row { display: grid; grid-template-columns: 1fr 52px 52px 30px; gap: 6px; align-items: center; }
+  .token-row input[type="text"] { background: var(--surface2); border: 1px solid var(--border); border-radius: 5px; color: #b87eff; font-family: var(--font-mono); font-size: 12px; height: 28px; padding: 0 8px; outline: none; transition: border-color 0.15s; width: 100%; }
+  .token-row input[type="number"] { background: var(--surface2); border: 1px solid var(--border); border-radius: 5px; font-family: var(--font-mono); font-size: 12px; height: 28px; padding: 0 4px; outline: none; transition: border-color 0.15s; width: 100%; text-align: center; }
+  .token-row input:focus { border-color: #b87eff; }
+  .token-add-btn { margin: 0.4rem 1.25rem 0.6rem; height: 28px; background: transparent; border: 1px dashed var(--border); border-radius: 5px; color: var(--text-muted); font-family: var(--font-mono); font-size: 11px; cursor: pointer; transition: all 0.15s; flex-shrink: 0; }
+  .token-add-btn:hover { border-color: #b87eff; color: #b87eff; background: #120a1f; }
+
+  /* TOKEN METRICS PANEL */
+  .token-metrics-panel { margin-top: 8px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 0.5rem 0.9rem; }
+  .token-hit-badge { font-size: 10px; padding: 2px 8px; border-radius: 999px; background: #120a1f; color: #b87eff; border: 1px solid #3d1a7a; font-family: var(--font-mono); }
+  .token-hits-row { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
 </style>
 </head>
 <body>
@@ -548,11 +572,26 @@
     <div class="abs-panel">
       <div class="abs-panel-header" onclick="toggleAbsPanel()">
         <span class="abs-panel-title">Absolutes List</span>
-        <span class="abs-toggle-icon" id="abs-toggle-icon">▾</span>
+        <div style="display:flex;align-items:center;gap:6px;" onclick="event.stopPropagation()">
+          <button class="hl-toggle-btn" id="abs-score-toggle" onclick="toggleAbsScoring()">abs scoring off</button>
+          <span class="abs-toggle-icon" id="abs-toggle-icon">▾</span>
+        </div>
       </div>
       <div class="abs-body" id="abs-body">
         <div class="abs-word-rows" id="abs-word-list"></div>
         <button class="abs-add-btn" onclick="addAbsoluteWord()">+ add absolute</button>
+      </div>
+    </div>
+
+    <!-- CUSTOM TOKENS -->
+    <div class="token-panel">
+      <div class="token-panel-header" onclick="toggleTokenPanel()">
+        <span class="token-panel-title">Custom Tokens</span>
+        <span class="token-toggle-icon" id="token-toggle-icon">▾</span>
+      </div>
+      <div class="token-body" id="token-body">
+        <div class="token-word-rows" id="token-word-list"></div>
+        <button class="token-add-btn" onclick="addCustomToken()">+ add token</button>
       </div>
     </div>
   </div>
@@ -985,6 +1024,17 @@
 
       </div>
 
+      <!-- CUSTOM TOKEN METRICS -->
+      <div class="token-metrics-panel">
+        <div class="sb-header" style="margin-bottom:6px;">
+          <span class="analytics-label has-info" data-info="CUSTOM TOKEN HITS|Shows which custom tokens appeared in the text and how many times.|Tokens with values assigned contribute to the total score.|Score shown per token — positive value used for scoring, negative for polarity composite.">Custom Token Hits</span>
+          <span style="font-size:10px;color:var(--text-dim);font-family:var(--font-mono)" id="ct-note">—</span>
+        </div>
+        <div class="token-hits-row" id="ct-hits">
+          <span style="font-size:10px;color:var(--text-dim)">no custom tokens defined</span>
+        </div>
+      </div>
+
     </div>
   </div>
 </div>
@@ -1008,6 +1058,15 @@
   let highlightOn  = true;
   let velocityOn   = true;
   let capsScoring  = false;
+  let absScoring   = false; // off by default — observational only
+
+  function toggleAbsScoring() {
+    absScoring = !absScoring;
+    const btn = document.getElementById('abs-score-toggle');
+    btn.textContent = absScoring ? 'abs scoring on' : 'abs scoring off';
+    btn.classList.toggle('active', absScoring);
+    analyzeOnly();
+  }
   let polarityOn   = true;
   let wholeWordOnly = true; // single alphabetic letters only score as standalone tokens
 
@@ -1090,7 +1149,7 @@
   });
 
   function exportDict() {
-    const data = { words: rows.map(r => ({ word: r.word, scoreNeg: r.scoreNeg, scorePos: r.scorePos })), absolutes: absolutesList.map(e => ({ word: e.word, scoreNeg: e.scoreNeg, scorePos: e.scorePos })) };
+    const data = { words: rows.map(r => ({ word: r.word, scoreNeg: r.scoreNeg, scorePos: r.scorePos })), absolutes: absolutesList.map(e => ({ word: e.word, scoreNeg: e.scoreNeg, scorePos: e.scorePos })), customTokens: customTokens.map(t => ({ word: t.word, scoreNeg: t.scoreNeg, scorePos: t.scorePos })) };
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
@@ -1120,7 +1179,13 @@
                 : { word: String(e.word || '').toLowerCase().trim(), scoreNeg: e.scoreNeg ?? null, scorePos: e.scorePos ?? null }
             ).filter(e => e.word.length > 0);
         }
-        buildRows(); buildAbsoluteRows(); analyzeOnly();
+          if (parsed.customTokens && Array.isArray(parsed.customTokens))
+            customTokens = parsed.customTokens.map(t =>
+              typeof t === 'string'
+                ? { word: t.trim(), scoreNeg: null, scorePos: null }
+                : { word: String(t.word || '').trim(), scoreNeg: t.scoreNeg ?? null, scorePos: t.scorePos ?? null }
+            ).filter(t => t.word.length > 0);
+          buildRows(); buildAbsoluteRows(); buildTokenRows(); analyzeOnly();
       } catch { alert('Could not parse JSON file.'); }
     };
     reader.readAsText(file);
@@ -1561,6 +1626,77 @@
 
   let absPanelOpen = false;
 
+  // ── CUSTOM TOKENS ─────────────────────────────────────────────────────
+  let customTokens = []; // { word, scoreNeg, scorePos }
+  let tokenPanelOpen = false;
+
+  function toggleTokenPanel() {
+    tokenPanelOpen = !tokenPanelOpen;
+    document.getElementById('token-body').classList.toggle('open', tokenPanelOpen);
+    document.getElementById('token-toggle-icon').classList.toggle('open', tokenPanelOpen);
+  }
+
+  function buildTokenRows() {
+    const list = document.getElementById('token-word-list');
+    list.innerHTML = '';
+    customTokens.forEach((t, i) => {
+      const div = document.createElement('div'); div.className = 'token-row';
+
+      const wi = document.createElement('input'); wi.type = 'text'; wi.value = t.word;
+      wi.addEventListener('input', e => { customTokens[i].word = e.target.value; });
+      wi.addEventListener('blur', () => {
+        customTokens[i].word = customTokens[i].word.trim();
+        if (!customTokens[i].word) {
+          customTokens = customTokens.filter((_, idx) => idx !== i);
+          buildTokenRows();
+        }
+        analyzeOnly();
+      });
+
+      const sn = document.createElement('input'); sn.type = 'number'; sn.placeholder = '−';
+      sn.value = t.scoreNeg !== null && t.scoreNeg !== undefined ? t.scoreNeg : '';
+      sn.style.color = '#ff5c5c';
+      sn.addEventListener('input', e => {
+        customTokens[i].scoreNeg = e.target.value !== '' ? parseFloat(e.target.value) : null;
+      });
+
+      const sp = document.createElement('input'); sp.type = 'number'; sp.placeholder = '+';
+      sp.value = t.scorePos !== null && t.scorePos !== undefined ? t.scorePos : '';
+      sp.style.color = 'var(--accent)';
+      sp.addEventListener('input', e => {
+        customTokens[i].scorePos = e.target.value !== '' ? parseFloat(e.target.value) : null;
+      });
+
+      const db = document.createElement('button'); db.className = 'del-btn'; db.textContent = '×';
+      db.style.width = '28px'; db.style.height = '28px';
+      db.addEventListener('click', () => { customTokens.splice(i, 1); buildTokenRows(); analyzeOnly(); });
+
+      div.addEventListener('focusout', () => {
+        setTimeout(() => { if (!div.contains(document.activeElement)) analyzeOnly(); }, 0);
+      });
+
+      div.appendChild(wi); div.appendChild(sn); div.appendChild(sp); div.appendChild(db);
+      list.appendChild(div);
+    });
+  }
+
+  function addCustomToken() {
+    customTokens.push({ word: '', scoreNeg: null, scorePos: null });
+    buildTokenRows();
+    const inputs = document.querySelectorAll('.token-row input[type="text"]');
+    inputs[inputs.length - 1].focus();
+  }
+
+  function buildTokenizerRegex() {
+    const parts = [];
+    const sorted = [...customTokens].filter(t => t.word && t.word.trim()).map(t => t.word.trim()).sort((a, b) => b.length - a.length);
+    sorted.forEach(t => parts.push(t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
+    parts.push(':\\)|:\\(|:D|:P|:O|;\\)|<3|>:|:\\/|:\\||XD|xD');
+    parts.push("[a-zA-Z']+");
+    parts.push('[^a-zA-Z\\s]+');
+    return new RegExp(parts.join('|'), 'g');
+  }
+
   function toggleAbsPanel() {
     absPanelOpen = !absPanelOpen;
     document.getElementById('abs-body').classList.toggle('open', absPanelOpen);
@@ -1742,7 +1878,7 @@
 
     // Score every sentence
     const scored = sentences.map(sent => {
-      const tokens = sent.match(/:\)|:\(|:D|:P|:O|;\)|<3|>:|:\/|:\||XD|xD|[a-zA-Z']+|[^a-zA-Z\s]+/g) || [];
+      const tokens = sent.match(buildTokenizerRegex()) || [];
       let score = 0, matched = 0;
       tokens.forEach(w => {
         const key = w.toLowerCase();
@@ -2354,6 +2490,55 @@
       });
   }
 
+  // ── CUSTOM TOKEN METRICS ──────────────────────────────────────────────
+  function updateCustomTokenMetrics(wordTokens) {
+    const hitsEl = document.getElementById('ct-hits');
+    const noteEl = document.getElementById('ct-note');
+
+    const validTokens = customTokens.filter(t => t.word && t.word.trim());
+
+    if (validTokens.length === 0) {
+      hitsEl.innerHTML = '<span style="font-size:10px;color:var(--text-dim)">no custom tokens defined</span>';
+      noteEl.textContent = '—'; return;
+    }
+
+    const found = {};
+    wordTokens.forEach(w => {
+      const key = w.toLowerCase();
+      const match = validTokens.find(t => t.word.toLowerCase() === key);
+      if (match) {
+        if (!found[key]) found[key] = { token: match, count: 0 };
+        found[key].count++;
+      }
+    });
+
+    hitsEl.innerHTML = '';
+    const foundKeys = Object.keys(found);
+
+    if (foundKeys.length === 0) {
+      hitsEl.innerHTML = '<span style="font-size:10px;color:var(--text-dim)">none found in text</span>';
+      noteEl.textContent = `${validTokens.length} token${validTokens.length !== 1 ? 's' : ''} defined`;
+      return;
+    }
+
+    foundKeys.forEach(key => {
+      const { token, count } = found[key];
+      const pos = token.scorePos !== null && token.scorePos !== undefined ? parseFloat(token.scorePos) : null;
+      const neg = token.scoreNeg !== null && token.scoreNeg !== undefined ? parseFloat(token.scoreNeg) : null;
+      const b = document.createElement('span'); b.className = 'token-hit-badge';
+      let label = `${token.word} ×${count}`;
+      if (pos !== null || neg !== null) {
+        const scoreStr = pos !== null ? ` +${pos * count}` : '';
+        const negStr   = neg !== null ? ` / ${neg * count}` : '';
+        label += `${scoreStr}${negStr}`;
+      }
+      b.textContent = label;
+      hitsEl.appendChild(b);
+    });
+
+    noteEl.textContent = `${foundKeys.length} of ${validTokens.length} tokens found`;
+  }
+
   function analyzeOnly() {
     const raw = getRawText();
     if (!raw.trim()) peakStreak = null;
@@ -2371,6 +2556,24 @@
       dict[key] = scoreVal(parseFloat(primary) || 0);
     });
 
+    // Merge custom tokens into dict
+    customTokens.forEach(t => {
+      if (!t.word || !t.word.trim()) return;
+      const key = t.word.trim().toLowerCase();
+      const primary = t.scorePos !== null && t.scorePos !== undefined ? t.scorePos : (t.scoreNeg !== null && t.scoreNeg !== undefined ? t.scoreNeg : 0);
+      dict[key] = scoreVal(parseFloat(primary) || 0);
+    });
+
+    // Merge absolutes into dict when absScoring is on
+    if (absScoring) {
+      absolutesList.forEach(a => {
+        if (!a.word || !a.word.trim()) return;
+        const key = a.word.trim().toLowerCase();
+        const primary = a.scorePos !== null && a.scorePos !== undefined ? a.scorePos : (a.scoreNeg !== null && a.scoreNeg !== undefined ? a.scoreNeg : 0);
+        if (parseFloat(primary) !== 0) dict[key] = scoreVal(parseFloat(primary) || 0);
+      });
+    }
+
     // Duality dicts — negDict uses scoreNeg, posDict uses scorePos
     const negDict = {}, posDict = {};
     rows.forEach(r => {
@@ -2378,6 +2581,13 @@
       const key = r.word.trim().toLowerCase();
       if (r.scoreNeg !== null && r.scoreNeg !== undefined) negDict[key] = parseFloat(r.scoreNeg) || 0;
       if (r.scorePos !== null && r.scorePos !== undefined) posDict[key] = parseFloat(r.scorePos) || 0;
+    });
+    // Merge custom tokens into duality dicts
+    customTokens.forEach(t => {
+      if (!t.word || !t.word.trim()) return;
+      const key = t.word.trim().toLowerCase();
+      if (t.scoreNeg !== null && t.scoreNeg !== undefined) negDict[key] = parseFloat(t.scoreNeg) || 0;
+      if (t.scorePos !== null && t.scorePos !== undefined) posDict[key] = parseFloat(t.scorePos) || 0;
     });
     const charDict = {}, wordDict = {};
     Object.entries(dict).forEach(([k, v]) => {
@@ -2393,7 +2603,7 @@
     });
 
     // Layer 1 — word tokens
-    const wordTokens = raw.match(/:\)|:\(|:D|:P|:O|;\)|<3|>:|:\/|:\||XD|xD|[a-zA-Z']+|[^a-zA-Z\s]+/g) || [];
+    const wordTokens = raw.match(buildTokenizerRegex()) || [];
     let wordBase = 0, wordMatched = 0; const wordHits = {};
     wordTokens.forEach(w => {
       const key = w.toLowerCase();
@@ -2503,6 +2713,7 @@
     updateImperativeCounter(raw3);
     updateSentenceOpeners(raw3);
     updateCharacterBreakdown(raw3);
+    updateCustomTokenMetrics(wordTokens);
   }
 
   function analyze() { analyzeOnly(); }
@@ -2545,8 +2756,9 @@
     const dualWords = [];
     document.querySelectorAll('.duality-badge').forEach(b => dualWords.push(b.textContent.trim()));
 
-    // Potential range words
-    const potentialWords = [];
+    // Custom token hits
+    const ctHits = [];
+    document.querySelectorAll('.token-hit-badge').forEach(b => ctHits.push(b.textContent.trim()));
     document.querySelectorAll('.potential-badge').forEach(b => potentialWords.push(b.textContent.trim()));
 
     // Hedge words
@@ -2669,7 +2881,8 @@
           pctOfText: get('caps-pct'),
           intensity: get('caps-intensity'),
           words:     capsWords
-        }
+        },
+        customTokenHits: ctHits
       },
       repeatedWords: repeated,
       sentenceBreakdown: sentenceRows
@@ -2774,6 +2987,7 @@
 
   buildRows();
   buildAbsoluteRows();
+  buildTokenRows();
   updateMultiplier(20);
   analyzeOnly();
 </script>
