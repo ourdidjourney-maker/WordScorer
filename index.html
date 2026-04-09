@@ -458,6 +458,14 @@
   .token-metrics-panel { margin-top: 8px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 0.5rem 0.9rem; }
   .token-hit-badge { font-size: 10px; padding: 2px 8px; border-radius: 999px; background: #120a1f; color: #b87eff; border: 1px solid #3d1a7a; font-family: var(--font-mono); }
   .token-hits-row { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
+
+  /* LEXICAL DIVERSITY / SIGNAL-TO-NOISE / EMOTIONAL ARC */
+  .insights-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 8px; }
+  .arc-bars { display: flex; gap: 4px; align-items: flex-end; height: 32px; margin-top: 6px; }
+  .arc-bar { flex: 1; border-radius: 2px 2px 0 0; min-height: 2px; transition: height 0.3s ease; position: relative; }
+  .arc-bar:hover::after { content: attr(data-tip); position: absolute; bottom: calc(100% + 3px); left: 50%; transform: translateX(-50%); background: var(--surface2); border: 1px solid var(--border); border-radius: 3px; padding: 2px 6px; font-size: 10px; color: var(--text); white-space: nowrap; pointer-events: none; z-index: 10; font-family: var(--font-mono); }
+  .arc-labels { display: flex; justify-content: space-between; margin-top: 3px; }
+  .arc-label { font-size: 9px; color: var(--text-dim); font-family: var(--font-mono); }
 </style>
 </head>
 <body>
@@ -500,8 +508,16 @@
         <div class="modal-section-title">Toggles</div>
         <p><strong>Velocity on/off</strong> — disables chain bonuses. Total score becomes pure base weight.<br>
         <strong>Polarity on/off</strong> — when off, all negative values are treated as positive. Measures emotional intensity regardless of direction.<br>
+        <strong>Whole word on/off</strong> — when on, single alphabetic letters only score as standalone tokens, not inside longer words. Prevents letter-level noise.<br>
         <strong>Caps scoring</strong> — when on, ALL CAPS dictionary words score 1.5× their base value.<br>
+        <strong>Abs scoring</strong> — when on, absolutes with assigned values contribute to the total score.<br>
         <strong>Highlights on/off</strong> — toggles colour highlights in the text area.</p>
+      </div>
+
+      <div class="modal-section">
+        <div class="modal-section-title">Left Panel — Lists</div>
+        <p><strong>Absolutes List</strong> — a separate editable list of certainty words (none, never, always, etc.). Each entry can have its own − and + values. Toggle "abs scoring" to include them in the total score or keep them purely observational.</p>
+        <p><strong>Custom Tokens</strong> — define exact-match tokens that the engine recognizes as single units before applying standard tokenization rules. Each token can carry its own − and + values. Useful for slang, dialect words, hyphenated phrases, emoticons, and any multi-character unit that standard tokenization would break apart.</p>
       </div>
 
       <div class="modal-section">
@@ -509,7 +525,7 @@
         <div class="modal-grid">
           <div class="modal-metric"><div class="modal-metric-name">Intensity Map</div><div class="modal-metric-desc">Heatmap of score density across the text. Orange = high concentration. Green = low.</div></div>
           <div class="modal-metric"><div class="modal-metric-name">Velocity Ratio</div><div class="modal-metric-desc">% of total score from chain bonuses. High = emotion is feeding itself. Low = words are placed deliberately.</div></div>
-          <div class="modal-metric"><div class="modal-metric-name">Pronoun Tracker</div><div class="modal-metric-desc">I/me vs you/your vs we/our counts. Zero I/me + high you + high we = recruitment or sermon pattern.</div></div>
+          <div class="modal-metric"><div class="modal-metric-name">Pronoun Tracker</div><div class="modal-metric-desc">I/me vs you vs we/our counts. Zero I/me + high you + high we = recruitment or sermon pattern.</div></div>
           <div class="modal-metric"><div class="modal-metric-name">Tone vs Mass</div><div class="modal-metric-desc">Gap between calm tone and heavy payload. High = controlled rhetoric delivered in measured language.</div></div>
           <div class="modal-metric"><div class="modal-metric-name">Draft vs Rant</div><div class="modal-metric-desc">Was this constructed deliberately or vented emotionally? Based on velocity ratio and repetition density.</div></div>
           <div class="modal-metric"><div class="modal-metric-name">Authorship Fingerprint</div><div class="modal-metric-desc">Sermon · Rant · Persuasion · Essay · Neutral — synthesised from all structural signals.</div></div>
@@ -517,12 +533,17 @@
           <div class="modal-metric"><div class="modal-metric-name">Text Weight</div><div class="modal-metric-desc">Raw base mass with no bonuses. Shows which words carry the most weight and their % of total.</div></div>
           <div class="modal-metric"><div class="modal-metric-name">Polarity Composite</div><div class="modal-metric-desc">Positive vs negative weight split. Tension = how hard the text pulls in both directions simultaneously.</div></div>
           <div class="modal-metric"><div class="modal-metric-name">Duality Score</div><div class="modal-metric-desc">For dual words: Score A (negative reading) vs Score B (positive reading). Range = interpretive ambiguity.</div></div>
-          <div class="modal-metric"><div class="modal-metric-name">Absolutes Counter</div><div class="modal-metric-desc">Certainty words — none, never, always, every, etc. High count = closed worldview, no nuance available.</div></div>
+          <div class="modal-metric"><div class="modal-metric-name">Potential Range</div><div class="modal-metric-desc">Max, min and midpoint potential of every word in the text. Range = how much the text could swing depending on context and relationship.</div></div>
+          <div class="modal-metric"><div class="modal-metric-name">Absolutes Counter</div><div class="modal-metric-desc">Certainty words from your editable absolutes list. High count = closed worldview, no nuance available. Toggle abs scoring to include values in the total score.</div></div>
           <div class="modal-metric"><div class="modal-metric-name">Hedge Density</div><div class="modal-metric-desc">Uncertainty words — maybe, perhaps, might, seems, etc. High hedging in high-mass text = anxious or deliberately vague.</div></div>
           <div class="modal-metric"><div class="modal-metric-name">Imperative Counter</div><div class="modal-metric-desc">Command-form sentences. High imperatives in calm drafted text = orders disguised as comfort.</div></div>
           <div class="modal-metric"><div class="modal-metric-name">Sentence Openers</div><div class="modal-metric-desc">What word starts each sentence. I/me = self-focused. You = reader-targeting. We/our = collectivising.</div></div>
-          <div class="modal-metric"><div class="modal-metric-name">Char Density</div><div class="modal-metric-desc">Total character count shown in the top bar — with spaces and without. Avg word length shown as a subtitle. Low avg = punchy/simple. High avg = complex/academic.</div></div>
-          <div class="modal-metric"><div class="modal-metric-name">Character Breakdown</div><div class="modal-metric-desc">Full character analysis — with spaces, no spaces, letters only, symbols only. Symbols = punctuation, emoticons, special characters. Shows how much of the text is pure language vs emphasis and decoration.</div></div>
+          <div class="modal-metric"><div class="modal-metric-name">Char Density</div><div class="modal-metric-desc">Total character count — with spaces and without. Avg word length shown as subtitle. Low = punchy/simple. High = complex/academic.</div></div>
+          <div class="modal-metric"><div class="modal-metric-name">Character Breakdown</div><div class="modal-metric-desc">Full character analysis — with spaces, no spaces, letters only, symbols only. Shows how much of the text is pure language vs emphasis and decoration.</div></div>
+          <div class="modal-metric"><div class="modal-metric-name">Custom Token Hits</div><div class="modal-metric-desc">Which custom tokens from your token list appeared in the text, how many times, and their score contribution. Tokens with values assigned feed into the total score.</div></div>
+          <div class="modal-metric"><div class="modal-metric-name">Lexical Diversity</div><div class="modal-metric-desc">Unique words ÷ total words. High = varied vocabulary. Low = repetitive or templated writing. Useful for detecting generated text or measuring vocabulary range.</div></div>
+          <div class="modal-metric"><div class="modal-metric-name">Signal to Noise</div><div class="modal-metric-desc">What % of the text carries emotional weight vs neutral filler. High signal = dense loaded writing. Low signal = heavy words scattered through neutral text.</div></div>
+          <div class="modal-metric"><div class="modal-metric-name">Emotional Arc</div><div class="modal-metric-desc">Splits the text into three sections — opening, middle, closing — and shows the score density of each. Rising, falling, or peak-in-middle patterns reveal narrative emotional structure.</div></div>
         </div>
       </div>
 
@@ -1033,6 +1054,41 @@
         <div class="token-hits-row" id="ct-hits">
           <span style="font-size:10px;color:var(--text-dim)">no custom tokens defined</span>
         </div>
+      </div>
+
+      <!-- INSIGHTS ROW: Lexical Diversity · Signal to Noise · Emotional Arc -->
+      <div class="insights-row">
+
+        <div class="analytics-card">
+          <span class="analytics-label has-info" data-info="LEXICAL DIVERSITY|Unique words ÷ total words — how varied the vocabulary is.|High = rich, varied writing. Low = repetitive or templated.|🟢 Over 70% = highly varied · 🟡 40–70% = normal · 🟠 Under 40% = repetitive|Useful for detecting generated text, studying writing style, or measuring vocabulary range.">Lexical Diversity</span>
+          <div class="ratio-display">
+            <span class="ratio-pct" id="ld-pct" style="font-size:20px;">0%</span>
+            <span class="ratio-sub" id="ld-sub">unique words</span>
+          </div>
+          <div class="ratio-track"><div class="ratio-fill" id="ld-fill" style="width:0%"></div></div>
+        </div>
+
+        <div class="analytics-card">
+          <span class="analytics-label has-info" data-info="SIGNAL TO NOISE|What % of the text is actually carrying emotional weight vs filler.|Signal = weighted words. Noise = everything else.|High signal = dense, loaded writing — every word counts.|Low signal = lots of neutral filler around a few heavy words.|🟢 Under 20% = sparse · 🟡 20–40% = moderate · 🟠 Over 40% = dense">Signal to Noise</span>
+          <div class="ratio-display">
+            <span class="ratio-pct" id="sn-pct" style="font-size:20px;">0%</span>
+            <span class="ratio-sub" id="sn-sub">signal</span>
+          </div>
+          <div class="ratio-track"><div class="ratio-fill" id="sn-fill" style="width:0%"></div></div>
+        </div>
+
+        <div class="analytics-card">
+          <span class="analytics-label has-info" data-info="EMOTIONAL ARC|Splits the text into three equal sections and shows how the score changes across them.|Rising = emotion builds toward the end. Falling = front-loaded. Peak = climax in middle.|Each bar = score density of that section. Hover for exact value.|Useful for narrative analysis — where is the emotional weight concentrated?">Emotional Arc</span>
+          <div class="arc-bars" id="arc-bars">
+            <span style="font-size:10px;color:var(--text-dim)">paste text</span>
+          </div>
+          <div class="arc-labels">
+            <span class="arc-label">opening</span>
+            <span class="arc-label">middle</span>
+            <span class="arc-label">closing</span>
+          </div>
+        </div>
+
       </div>
 
     </div>
@@ -2541,6 +2597,75 @@
     noteEl.textContent = `${foundKeys.length} of ${validTokens.length} tokens found`;
   }
 
+  // ── LEXICAL DIVERSITY ─────────────────────────────────────────────────
+  function updateLexicalDiversity(wordTokens) {
+    const pctEl = document.getElementById('ld-pct');
+    const subEl = document.getElementById('ld-sub');
+    const fillEl = document.getElementById('ld-fill');
+    if (!wordTokens.length) {
+      pctEl.textContent = '0%'; subEl.textContent = 'unique words';
+      fillEl.style.width = '0%'; return;
+    }
+    const total  = wordTokens.length;
+    const unique = new Set(wordTokens.map(w => w.toLowerCase())).size;
+    const pct    = Math.round((unique / total) * 100);
+    pctEl.textContent = pct + '%';
+    pctEl.className   = 'ratio-pct' + (pct >= 70 ? ' warm' : pct < 40 ? ' hot' : '');
+    subEl.textContent = `${unique} unique / ${total} total`;
+    fillEl.style.width = Math.min(100, pct) + '%';
+    fillEl.className   = 'ratio-fill' + (pct < 40 ? ' hot' : '');
+  }
+
+  // ── SIGNAL TO NOISE ───────────────────────────────────────────────────
+  function updateSignalToNoise(wordTokens, wordHits) {
+    const pctEl  = document.getElementById('sn-pct');
+    const subEl  = document.getElementById('sn-sub');
+    const fillEl = document.getElementById('sn-fill');
+    if (!wordTokens.length) {
+      pctEl.textContent = '0%'; subEl.textContent = 'signal';
+      fillEl.style.width = '0%'; return;
+    }
+    const matched = Object.values(wordHits).reduce((a, b) => a + b.count, 0);
+    const total   = wordTokens.length;
+    const pct     = Math.round((matched / total) * 100);
+    pctEl.textContent = pct + '%';
+    pctEl.className   = 'ratio-pct' + (pct >= 40 ? ' hot' : pct >= 20 ? ' warm' : '');
+    subEl.textContent = `${matched} weighted / ${total} total`;
+    fillEl.style.width = Math.min(100, pct) + '%';
+    fillEl.className   = 'ratio-fill' + (pct >= 40 ? ' hot' : '');
+  }
+
+  // ── EMOTIONAL ARC ─────────────────────────────────────────────────────
+  function updateEmotionalArc(wordTokens, dict) {
+    const barsEl = document.getElementById('arc-bars');
+    if (!wordTokens.length) {
+      barsEl.innerHTML = '<span style="font-size:10px;color:var(--text-dim)">paste text</span>';
+      return;
+    }
+    // Split tokens into three sections
+    const third = Math.ceil(wordTokens.length / 3);
+    const sections = [
+      wordTokens.slice(0, third),
+      wordTokens.slice(third, third * 2),
+      wordTokens.slice(third * 2)
+    ];
+    const scores = sections.map(sec => {
+      let s = 0;
+      sec.forEach(w => { const k = w.toLowerCase(); if (k in dict) s += dict[k]; });
+      return s;
+    });
+    const maxS = Math.max(...scores, 1);
+    const COLORS = ['#5cb8ff', '#ffc840', '#ff8c30'];
+    barsEl.innerHTML = '';
+    scores.forEach((score, i) => {
+      const bar = document.createElement('div'); bar.className = 'arc-bar';
+      bar.style.height = Math.max(3, Math.round((score / maxS) * 32)) + 'px';
+      bar.style.background = COLORS[i];
+      bar.setAttribute('data-tip', `${['opening','middle','closing'][i]}: +${fmt(score)}`);
+      barsEl.appendChild(bar);
+    });
+  }
+
   function analyzeOnly() {
     const raw = getRawText();
     if (!raw.trim()) peakStreak = null;
@@ -2716,6 +2841,9 @@
     updateSentenceOpeners(raw3);
     updateCharacterBreakdown(raw3);
     updateCustomTokenMetrics(wordTokens);
+    updateLexicalDiversity(wordTokens);
+    updateSignalToNoise(wordTokens, wordHits);
+    updateEmotionalArc(wordTokens, dict);
   }
 
   function analyze() { analyzeOnly(); }
@@ -2761,6 +2889,9 @@
     // Custom token hits
     const ctHits = [];
     document.querySelectorAll('.token-hit-badge').forEach(b => ctHits.push(b.textContent.trim()));
+
+    // Potential range words
+    const potentialWords = [];
     document.querySelectorAll('.potential-badge').forEach(b => potentialWords.push(b.textContent.trim()));
 
     // Hedge words
@@ -2884,7 +3015,15 @@
           intensity: get('caps-intensity'),
           words:     capsWords
         },
-        customTokenHits: ctHits
+        customTokenHits: ctHits,
+        lexicalDiversity: {
+          pct:    get('ld-pct'),
+          detail: get('ld-sub')
+        },
+        signalToNoise: {
+          pct:    get('sn-pct'),
+          detail: get('sn-sub')
+        }
       },
       repeatedWords: repeated,
       sentenceBreakdown: sentenceRows
