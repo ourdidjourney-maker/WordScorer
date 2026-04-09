@@ -1649,8 +1649,8 @@
         if (!customTokens[i].word) {
           customTokens = customTokens.filter((_, idx) => idx !== i);
           buildTokenRows();
+          analyzeOnly();
         }
-        analyzeOnly();
       });
 
       const sn = document.createElement('input'); sn.type = 'number'; sn.placeholder = '−';
@@ -1720,8 +1720,8 @@
         if (!absolutesList[i].word) {
           absolutesList = absolutesList.filter((_, idx) => idx !== i);
           buildAbsoluteRows();
+          analyzeOnly();
         }
-        analyzeOnly();
       });
 
       const sn = document.createElement('input'); sn.type = 'number'; sn.placeholder = '−';
@@ -1729,7 +1729,6 @@
       sn.style.color = '#ff5c5c';
       sn.addEventListener('input', e => {
         absolutesList[i].scoreNeg = e.target.value !== '' ? parseFloat(e.target.value) : null;
-        analyzeOnly();
       });
 
       const sp = document.createElement('input'); sp.type = 'number'; sp.placeholder = '+';
@@ -1737,7 +1736,6 @@
       sp.style.color = 'var(--accent)';
       sp.addEventListener('input', e => {
         absolutesList[i].scorePos = e.target.value !== '' ? parseFloat(e.target.value) : null;
-        analyzeOnly();
       });
 
       const db = document.createElement('button');
@@ -1745,6 +1743,10 @@
       db.style.width = '28px'; db.style.height = '28px';
       db.addEventListener('click', () => {
         absolutesList.splice(i, 1); buildAbsoluteRows(); analyzeOnly();
+      });
+
+      div.addEventListener('focusout', () => {
+        setTimeout(() => { if (!div.contains(document.activeElement)) analyzeOnly(); }, 0);
       });
 
       div.appendChild(wi); div.appendChild(sn); div.appendChild(sp); div.appendChild(db);
