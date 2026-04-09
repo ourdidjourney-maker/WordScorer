@@ -2485,6 +2485,7 @@
 
     let totalMax = 0, totalMin = 0;
     const contributions = {};
+    const countedPR = new Set();
 
     // Process word tokens
     wordTokens.forEach(w => {
@@ -2494,23 +2495,23 @@
 
       const pos = row.scorePos !== null && row.scorePos !== undefined ? parseFloat(row.scorePos) : null;
       const neg = row.scoreNeg !== null && row.scoreNeg !== undefined ? parseFloat(row.scoreNeg) : null;
-
       if (pos === null && neg === null) return;
 
-      // Max = highest value, Min = lowest value
       const hi = pos !== null && neg !== null ? Math.max(pos, neg) : (pos ?? neg);
       const lo = pos !== null && neg !== null ? Math.min(pos, neg) : (pos ?? neg);
 
       totalMax += hi;
       totalMin += lo;
+      countedPR.add(key);
 
       if (!contributions[key]) contributions[key] = { hi, lo, count: 0 };
       contributions[key].count++;
     });
 
-    // Char tokens
+    // Char tokens — skip any already counted via wordTokens
     charTokens.forEach(c => {
       const key = c.toLowerCase();
+      if (countedPR.has(key)) return;
       const row = rows.find(r => r.word.toLowerCase() === key && r.word.length === 1);
       if (!row) return;
       const pos = row.scorePos !== null && row.scorePos !== undefined ? parseFloat(row.scorePos) : null;
@@ -2617,7 +2618,7 @@
   }
 
   // ── SIGNAL TO NOISE ───────────────────────────────────────────────────
-  function updateSignalToNoise(wordTokens, wordHits) {
+  function updateSignalToNoise(wordTokens, wordHits, dict) {
     const pctEl  = document.getElementById('sn-pct');
     const subEl  = document.getElementById('sn-sub');
     const fillEl = document.getElementById('sn-fill');
@@ -2625,7 +2626,8 @@
       pctEl.textContent = '0%'; subEl.textContent = 'signal';
       fillEl.style.width = '0%'; return;
     }
-    const matched = Object.values(wordHits).reduce((a, b) => a + b.count, 0);
+    // Count all tokens that match the full dict — includes char layer hits like !
+    const matched = wordTokens.filter(w => w.toLowerCase() in dict).length;
     const total   = wordTokens.length;
     const pct     = Math.round((matched / total) * 100);
     pctEl.textContent = pct + '%';
@@ -2842,7 +2844,7 @@
     updateCharacterBreakdown(raw3);
     updateCustomTokenMetrics(wordTokens);
     updateLexicalDiversity(wordTokens);
-    updateSignalToNoise(wordTokens, wordHits);
+    updateSignalToNoise(wordTokens, wordHits, dict);
     updateEmotionalArc(wordTokens, dict);
   }
 
@@ -3063,6 +3065,7 @@
 
     let scoreA = 0, scoreB = 0;
     const found = {};
+    const countedKeys = new Set();
 
     wordTokens.forEach(w => {
       const key = w.toLowerCase();
@@ -3070,11 +3073,16 @@
         scoreA += dualWords[key].neg;
         scoreB += dualWords[key].pos;
         found[key] = (found[key] || 0) + 1;
+        countedKeys.add(key);
       }
     });
     charTokens.forEach(c => {
       const key = c.toLowerCase();
-      if (dualWords[key]) { scoreA += dualWords[key].neg; scoreB += dualWords[key].pos; }
+      // Skip if already counted via wordTokens to avoid double counting symbols
+      if (dualWords[key] && !countedKeys.has(key)) {
+        scoreA += dualWords[key].neg;
+        scoreB += dualWords[key].pos;
+      }
     });
 
     const range = Math.abs(scoreB - scoreA);
